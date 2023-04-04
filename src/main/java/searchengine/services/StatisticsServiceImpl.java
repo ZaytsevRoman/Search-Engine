@@ -37,8 +37,8 @@ public class StatisticsServiceImpl implements StatisticsService {
         Status status = site.getStatus();
         Date statusTime = site.getStatusTime();
         String error = site.getLastError();
-        int pages = pageRepository.countBySiteId(site);
-        int lemmas = lemmaRepository.countBySiteId(site);
+        int pages = pageRepository.countBySite(site);
+        int lemmas = lemmaRepository.countBySite(site);
         return new DetailedStatisticsItem(url, name, status, statusTime, error, pages, lemmas);
     }
 

@@ -7,6 +7,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import searchengine.dto.statistics.StatisticsPage;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ForkJoinTask;
@@ -27,11 +28,7 @@ public class UrlParser extends RecursiveTask<List<StatisticsPage>> {
     protected List<StatisticsPage> compute() {
         try {
             Thread.sleep(150);
-            Document document =  Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
-                    .referrer("http://www.google.com")
-                    .timeout(500 + (int) (Math.random() * 4500))
-                    .get();
+            Document document = getConnection();
             String html = document.outerHtml();
             Connection.Response response = document.connection().response();
             int statusCode = response.statusCode();
@@ -41,11 +38,7 @@ public class UrlParser extends RecursiveTask<List<StatisticsPage>> {
             List<UrlParser> taskList = new ArrayList<>();
             for (Element link : links) {
                 String absUrl = link.attr("abs:href");
-                if (absUrl.startsWith(link.baseUri())
-                        && !absUrl.equals(link.baseUri())
-                        && !absUrl.contains("#")
-                        && !absUrl.matches("([^\\s]+(\\.(?i)(jpg|png|gif|bmp|pdf))$)")
-                        && !urlList.contains(absUrl)) {
+                if (isCorrected(absUrl, link)) {
                     urlList.add(absUrl);
                     UrlParser task = new UrlParser(absUrl, statisticsPageList, urlList);
                     task.fork();
@@ -58,5 +51,21 @@ public class UrlParser extends RecursiveTask<List<StatisticsPage>> {
             statisticsPageList.add(statisticsPage);
         }
         return statisticsPageList;
+    }
+
+    private boolean isCorrected(String absUrl, Element link) {
+        return (absUrl.startsWith(link.baseUri())
+                && !absUrl.equals(link.baseUri())
+                && !absUrl.contains("#")
+                && !absUrl.matches("([^\\s]+(\\.(?i)(jpg|png|gif|bmp|pdf))$)")
+                && !urlList.contains(absUrl));
+    }
+
+    private Document getConnection() throws IOException {
+        return Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
+                .referrer("http://www.google.com")
+                .timeout(500 + (int) (Math.random() * 4500))
+                .get();
     }
 }

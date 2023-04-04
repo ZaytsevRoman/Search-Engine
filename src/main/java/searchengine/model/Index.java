@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.Objects;
 
 @Entity
 @Data
@@ -29,5 +30,29 @@ public class Index implements Serializable {
         this.page = page;
         this.lemma = lemma;
         this.rank = rank;
+    }
+
+    @Override
+    public String toString() {
+        return "Index{" +
+                "id=" + id +
+                ", page=" + page +
+                ", lemma=" + lemma +
+                ", rank=" + rank +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Index that = (Index) o;
+        return id == that.id && Float.compare(that.rank, rank) == 0 && page.equals(that.page)
+                && lemma.equals(that.lemma);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, page, lemma, rank);
     }
 }

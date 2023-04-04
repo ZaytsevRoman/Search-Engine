@@ -151,7 +151,7 @@ public class SiteIndexing implements Runnable {
     }
 
     private void errorSiteIndexing() {
-        Site site = new Site();
+        Site site = siteRepository.findByUrl(url);
         site.setLastError("Индексация остановлена");
         site.setStatus(Status.FAILED);
         site.setStatusTime(new Date());

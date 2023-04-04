@@ -11,8 +11,8 @@ import java.util.List;
 
 @Repository
 public interface LemmaRepository extends JpaRepository<Lemma, Integer> {
-    int countBySiteId(Site site);
-    List<Lemma> findBySiteId(Site siteId);
+    int countBySite(Site site);
+    List<Lemma> findBySite(Site site);
     @Query(value = "SELECT l.* FROM Lemma l WHERE l.lemma IN :lemmas AND l.site_id = :site", nativeQuery = true)
     List<Lemma> findLemmaListBySite(@Param("lemmas") List<String> lemmaList,
                                     @Param("site") Site site);

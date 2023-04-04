@@ -7,6 +7,7 @@ import javax.persistence.*;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "page", indexes = {@javax.persistence.Index(name = "path_list", columnList = "path")})
@@ -18,7 +19,7 @@ public class Page implements Serializable {
     private int id;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "site_id", referencedColumnName = "id")
-    private Site siteId;
+    private Site site;
     @Column(columnDefinition = "VARCHAR(255)", nullable = false)
     private String path;
     @Column(nullable = false)
@@ -28,10 +29,39 @@ public class Page implements Serializable {
     @OneToMany(mappedBy = "page", cascade = CascadeType.ALL)
     private List<Index> indexesList = new ArrayList<>();
 
-    public Page(Site siteId, String path, int code, String content) {
-        this.siteId = siteId;
+    public Page(Site site, String path, int code, String content) {
+        this.site = site;
         this.path = path;
         this.code = code;
         this.content = content;
+    }
+
+    @Override
+    public String toString() {
+        return "Page{" +
+                "id=" + id +
+                ", siteId=" + site +
+                ", path='" + path + '\'' +
+                ", code=" + code +
+                ", content='" + content + '\'' +
+                ", indexesList=" + indexesList +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Page that = (Page) o;
+        return id == that.id && code == that.code &&
+                site.equals(that.site) &&
+                path.equals(that.path) &&
+                content.equals(that.content) &&
+                indexesList.equals(that.indexesList);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, site, path, code, content, indexesList);
     }
 }

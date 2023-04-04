@@ -1,8 +1,12 @@
 package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import searchengine.config.SitesList;
+import searchengine.dto.statistics.BadRequest;
+import searchengine.dto.statistics.Response;
 import searchengine.model.Site;
 import searchengine.model.Status;
 import searchengine.parsers.IndexParser;
@@ -32,9 +36,10 @@ public class IndexingServiceImpl implements IndexingService {
 
 
     @Override
-    public boolean indexing() {
+    public ResponseEntity<Object> indexing() {
         if (isIndexingStarted()) {
-            return false;
+            return new ResponseEntity<>(new BadRequest(false, "Индексация уже запущена"),
+                    HttpStatus.BAD_REQUEST);
         } else {
             List<searchengine.config.Site> siteList = sitesList.getSites();
             executorService = Executors.newFixedThreadPool(processorCoreCount);
@@ -46,16 +51,17 @@ public class IndexingServiceImpl implements IndexingService {
             }
             executorService.shutdown();
         }
-        return true;
+        return new ResponseEntity<>(new Response(true), HttpStatus.OK);
     }
 
     @Override
-    public boolean stopIndexing() {
+    public ResponseEntity<Object> stopIndexing() {
         if (isIndexingStarted()) {
             executorService.shutdownNow();
-            return true;
+            return new ResponseEntity<>(new Response(true), HttpStatus.OK);
         } else {
-            return false;
+            return new ResponseEntity<>(new BadRequest(false,
+                    "Индексация не запущена"), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -71,14 +77,18 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     @Override
-    public boolean indexingPage(String url) {
-        if (urlCheck(url)) {
+    public ResponseEntity<Object> indexingPage(String url) {
+        if (url.isEmpty()) {
+            return new ResponseEntity<>(new BadRequest(false, "Страница не указана"), HttpStatus.BAD_REQUEST);
+        } else if (urlCheck(url)) {
             executorService = Executors.newFixedThreadPool(processorCoreCount);
             executorService.submit(new SiteIndexing(pageRepository, siteRepository, lemmaRepository, indexRepository, lemmaParser, indexParser, url, sitesList));
             executorService.shutdown();
-            return true;
+            return new ResponseEntity<>(new Response(true), HttpStatus.OK);
         } else {
-            return false;
+            return new ResponseEntity<>(new BadRequest(false, "Данная страница находится за пределами сайтов, \n" +
+                    "указанных в конфигурационном файле\n"),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 

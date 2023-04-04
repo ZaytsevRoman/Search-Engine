@@ -14,7 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
 @RequiredArgsConstructor
-public class Lemma implements LemmaParser {
+public class LemmaParserImpl implements LemmaParser {
     private final PageRepository pageRepository;
     private final MorphologyService morphology;
     private List<StatisticsLemma> statisticsLemmaList;
@@ -30,10 +30,8 @@ public class Lemma implements LemmaParser {
         TreeMap<String, Integer> lemmaList = new TreeMap<>();
         for (Page page : pageList) {
             String content = page.getContent();
-            String title = CleanHtmlCode.clear(content, "title");
-            String body = CleanHtmlCode.clear(content, "body");
-            HashMap<String, Integer> titleList = morphology.getLemmaList(title);
-            HashMap<String, Integer> bodyList = morphology.getLemmaList(body);
+            HashMap<String, Integer> titleList = getTitleList(content);
+            HashMap<String, Integer> bodyList = getBodyList(content);
             Set<String> allTheWords = new HashSet<>();
             allTheWords.addAll(titleList.keySet());
             allTheWords.addAll(bodyList.keySet());
@@ -42,9 +40,25 @@ public class Lemma implements LemmaParser {
                 lemmaList.put(word, frequency);
             }
         }
+        addStatisticsLemmaList(lemmaList);
+    }
+
+    private void addStatisticsLemmaList(TreeMap<String, Integer> lemmaList) {
         for (String lemma : lemmaList.keySet()) {
             Integer frequency = lemmaList.get(lemma);
             statisticsLemmaList.add(new StatisticsLemma(lemma, frequency));
         }
+    }
+
+    private HashMap<String, Integer> getTitleList(String content) {
+        String title = CleanHtmlCode.clear(content, "title");
+        HashMap<String, Integer> titleList = morphology.getLemmaList(title);
+        return titleList;
+    }
+
+    private HashMap<String, Integer> getBodyList(String content) {
+        String body = CleanHtmlCode.clear(content, "body");
+        HashMap<String, Integer> bodyList = morphology.getLemmaList(body);
+        return bodyList;
     }
 }

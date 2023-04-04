@@ -7,6 +7,7 @@ import javax.persistence.*;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Data
@@ -18,7 +19,7 @@ public class Lemma implements Serializable {
     private int id;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "site_id", referencedColumnName = "id")
-    private Site siteId;
+    private Site site;
     @Column(columnDefinition = "VARCHAR(255)", nullable = false)
     private String lemma;
     @Column(nullable = false)
@@ -26,9 +27,36 @@ public class Lemma implements Serializable {
     @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
     private List<Index> indexesList = new ArrayList<>();
 
-    public Lemma(String lemma, int frequency, Site siteId) {
+    public Lemma(String lemma, int frequency, Site site) {
         this.lemma = lemma;
         this.frequency = frequency;
-        this.siteId = siteId;
+        this.site = site;
+    }
+
+    @Override
+    public String toString() {
+        return "Lemma{" +
+                "id=" + id +
+                ", site=" + site +
+                ", lemma='" + lemma + '\'' +
+                ", frequency=" + frequency +
+                ", indexesList=" + indexesList +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Lemma that = (Lemma) o;
+        return id == that.id && frequency == that.frequency &&
+                site.equals(that.site) &&
+                lemma.equals(that.lemma) &&
+                indexesList.equals(that.indexesList);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, site, lemma, frequency, indexesList);
     }
 }
