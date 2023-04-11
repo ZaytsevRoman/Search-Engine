@@ -2,7 +2,7 @@
 
 По умолчанию веб-страница приложения находится по адресу: localhost:8080
 
-![Image alt](https://github.com/ZaytsevRoman/SkillboxTask/raw/main/1.jpg)
+![Image alt](https://github.com/ZaytsevRoman/SkillboxTask/tree/main/src/main/resources/screenshots/1.jpg)
 
 На главное странице отображается статистика:
 - количество проиндексированных сайтов
@@ -13,14 +13,14 @@
 
 На второй вкладке - Management
 
-![Image alt](https://github.com/ZaytsevRoman/SkillboxTask/raw/main/2.jpg)
+![Image alt](https://github.com/ZaytsevRoman/SkillboxTask/tree/main/src/main/resources/screenshots/2.jpg)
 
 Мы можем запустить индексацию по всем указанным сайтам в настройках программы кнопкой - Start indexing, 
 либо указать адрес одного сайта и запустить индексацию только по этому сайту кнопкой - Add/update
 
 На третьей вкладке - Search
 
-![Image alt](https://github.com/ZaytsevRoman/SkillboxTask/raw/main/3.jpg)
+![Image alt](https://github.com/ZaytsevRoman/SkillboxTask/tree/main/src/main/resources/screenshots/3.jpg)
 
 Мы можем осуществить поиск как по всем проиндексированным сайтам, так и выбрать один из проиндексированных сайтов для поиска
 
@@ -28,7 +28,7 @@
 
 В этой же вкладке ниже отобразится результат поиска
 
-![Image alt](https://github.com/ZaytsevRoman/SkillboxTask/raw/main/4.jpg)
+![Image alt](https://github.com/ZaytsevRoman/SkillboxTask/tree/main/src/main/resources/screenshots/4.jpg)
 
 Используемые технологии:
 - Spring Framework
