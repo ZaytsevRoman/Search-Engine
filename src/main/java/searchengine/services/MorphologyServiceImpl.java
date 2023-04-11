@@ -26,23 +26,23 @@ public class MorphologyServiceImpl implements MorphologyService {
         this.luceneMorphology = luceneMorphology;
     }
     @Override
-    public HashMap<String, Integer> getLemmaList(String content) {
+    public HashMap<String, Integer> getLemmaListWithCount(String content) {
         content = content.toLowerCase(Locale.ROOT)
                 .replaceAll(REGEX, " ");
-        HashMap<String, Integer> lemmaList = new HashMap<>();
-        String[] elements = content.toLowerCase(Locale.ROOT).split("\\s+");
-        for (String e : elements) {
-            List<String> wordsList = getLemma(e);
-            for (String word : wordsList) {
-                int count = lemmaList.getOrDefault(word, 0);
-                lemmaList.put(word, count + 1);
+        HashMap<String, Integer> lemmaListWithCount = new HashMap<>();
+        String[] words = content.toLowerCase(Locale.ROOT).split("\\s+");
+        for (String word : words) {
+            List<String> lemmaList = getLemmaList(word);
+            for (String lemma : lemmaList) {
+                int count = lemmaListWithCount.getOrDefault(lemma, 0);
+                lemmaListWithCount.put(lemma, count + 1);
             }
         }
-        return lemmaList;
+        return lemmaListWithCount;
     }
 
     @Override
-    public List<String> getLemma(String word) {
+    public List<String> getLemmaList(String word) {
         List<String> lemmaList = new ArrayList<>();
         try {
             List<String> baseRusForm = luceneMorphology.getNormalForms(word);
@@ -56,31 +56,31 @@ public class MorphologyServiceImpl implements MorphologyService {
     }
 
     @Override
-    public List<Integer> findLemmaIndexInText(String content, String lemma) {
+    public List<Integer> getLemmaIndexList(String content, String lemmaFromSearchText) {
         List<Integer> lemmaIndexList = new ArrayList<>();
-        String[] elements = content.toLowerCase(Locale.ROOT).split("\\p{Punct}|\\s");
+        String[] words = content.toLowerCase(Locale.ROOT).split("\\p{Punct}|\\s");
         int index = 0;
-        for (String e : elements) {
-            List<String> lemmas = getLemma(e);
-            for (String lem : lemmas) {
-                if (lem.equals(lemma)) {
+        for (String word : words) {
+            List<String> lemmaList = getLemmaList(word);
+            for (String lemmaFromContent : lemmaList) {
+                if (lemmaFromContent.equals(lemmaFromSearchText)) {
                     lemmaIndexList.add(index);
                 }
             }
-            index += e.length() + 1;
+            index += word.length() + 1;
         }
         return lemmaIndexList;
     }
 
     private boolean isServiceWord(String word) {
-        List<String> morphForm = luceneMorphology.getMorphInfo(word);
-        for (String l : morphForm) {
-            if (l.contains("ПРЕДЛ")
-                    || l.contains("СОЮЗ")
-                    || l.contains("МЕЖД")
-                    || l.contains("МС")
-                    || l.contains("ЧАСТ")
-                    || l.length() <= 3) {
+        List<String> morphInfoList = luceneMorphology.getMorphInfo(word);
+        for (String morphInfo : morphInfoList) {
+            if (morphInfo.contains("ПРЕДЛ")
+                    || morphInfo.contains("СОЮЗ")
+                    || morphInfo.contains("МЕЖД")
+                    || morphInfo.contains("МС")
+                    || morphInfo.contains("ЧАСТ")
+                    || morphInfo.length() <= 3) {
                 return true;
             }
         }

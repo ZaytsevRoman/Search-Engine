@@ -40,7 +40,7 @@ public class Page implements Serializable {
     public String toString() {
         return "Page{" +
                 "id=" + id +
-                ", siteId=" + site +
+                ", site=" + site +
                 ", path='" + path + '\'' +
                 ", code=" + code +
                 ", content='" + content + '\'' +

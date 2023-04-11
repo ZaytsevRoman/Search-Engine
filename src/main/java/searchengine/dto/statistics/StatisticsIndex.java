@@ -4,7 +4,7 @@ import lombok.Value;
 
 @Value
 public class StatisticsIndex {
-    Integer pageID;
-    Integer lemmaID;
-    Float rank;
+    private Integer pageId;
+    private Integer lemmaId;
+    private Float rank;
 }

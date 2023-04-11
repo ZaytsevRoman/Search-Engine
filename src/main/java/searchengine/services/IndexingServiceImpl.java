@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import searchengine.config.ConnectionConfiguration;
 import searchengine.config.SitesList;
 import searchengine.dto.statistics.BadRequest;
 import searchengine.dto.statistics.Response;
@@ -33,10 +34,11 @@ public class IndexingServiceImpl implements IndexingService {
     private final LemmaParser lemmaParser;
     private final IndexParser indexParser;
     private final SitesList sitesList;
+    private final ConnectionConfiguration connectionConfiguration;
 
 
     @Override
-    public ResponseEntity<Object> indexing() {
+    public ResponseEntity<Object> startIndexing() {
         if (isIndexingStarted()) {
             return new ResponseEntity<>(new BadRequest(false, "Индексация уже запущена"),
                     HttpStatus.BAD_REQUEST);
@@ -45,9 +47,7 @@ public class IndexingServiceImpl implements IndexingService {
             executorService = Executors.newFixedThreadPool(processorCoreCount);
             for (searchengine.config.Site site : siteList) {
                 String url = site.getUrl();
-                Site newSite = new Site();
-                newSite.setName(site.getName());
-                executorService.submit(new SiteIndexing(pageRepository, siteRepository, lemmaRepository, indexRepository, lemmaParser, indexParser, url, sitesList));
+                executorService.submit(new SiteIndexing(pageRepository, siteRepository, lemmaRepository, indexRepository, lemmaParser, indexParser, url, sitesList, connectionConfiguration));
             }
             executorService.shutdown();
         }
@@ -77,12 +77,12 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     @Override
-    public ResponseEntity<Object> indexingPage(String url) {
+    public ResponseEntity<Object> onePageIndexing(String url) {
         if (url.isEmpty()) {
             return new ResponseEntity<>(new BadRequest(false, "Страница не указана"), HttpStatus.BAD_REQUEST);
-        } else if (urlCheck(url)) {
+        } else if (isUrlInConfig(url)) {
             executorService = Executors.newFixedThreadPool(processorCoreCount);
-            executorService.submit(new SiteIndexing(pageRepository, siteRepository, lemmaRepository, indexRepository, lemmaParser, indexParser, url, sitesList));
+            executorService.submit(new SiteIndexing(pageRepository, siteRepository, lemmaRepository, indexRepository, lemmaParser, indexParser, url, sitesList, connectionConfiguration));
             executorService.shutdown();
             return new ResponseEntity<>(new Response(true), HttpStatus.OK);
         } else {
@@ -92,7 +92,7 @@ public class IndexingServiceImpl implements IndexingService {
         }
     }
 
-    private boolean urlCheck(String url) {
+    private boolean isUrlInConfig(String url) {
         List<searchengine.config.Site> urlList = sitesList.getSites();
         for (searchengine.config.Site site : urlList) {
             if (site.getUrl().equals(url)) {

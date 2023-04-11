@@ -2,7 +2,7 @@ package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import searchengine.dto.statistics.DetailedStatisticsItem;
+import searchengine.dto.statistics.DetailedStatistics;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
@@ -24,14 +24,21 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final LemmaRepository lemmaRepository;
     private final SiteRepository siteRepository;
 
-    private TotalStatistics getTotal() {
+    @Override
+    public StatisticsResponse getStatistics() {
+        TotalStatistics total = getTotalStatistics();
+        List<DetailedStatistics> list = getDetailedStatisticsList();
+        return new StatisticsResponse(true, new StatisticsData(total, list));
+    }
+
+    private TotalStatistics getTotalStatistics() {
         int sites = (int) siteRepository.count();
         int pages = (int) pageRepository.count();
         int lemmas = (int) lemmaRepository.count();
         return new TotalStatistics(sites, pages, lemmas, true);
     }
 
-    private DetailedStatisticsItem getDetailed(Site site) {
+    private DetailedStatistics getDetailedStatistics(Site site) {
         String url = site.getUrl();
         String name = site.getName();
         Status status = site.getStatus();
@@ -39,23 +46,16 @@ public class StatisticsServiceImpl implements StatisticsService {
         String error = site.getLastError();
         int pages = pageRepository.countBySite(site);
         int lemmas = lemmaRepository.countBySite(site);
-        return new DetailedStatisticsItem(url, name, status, statusTime, error, pages, lemmas);
+        return new DetailedStatistics(url, name, status, statusTime, error, pages, lemmas);
     }
 
-    private List<DetailedStatisticsItem> getDetailedList() {
+    private List<DetailedStatistics> getDetailedStatisticsList() {
         List<Site> siteList = siteRepository.findAll();
-        List<DetailedStatisticsItem> result = new ArrayList<>();
+        List<DetailedStatistics> result = new ArrayList<>();
         for (Site site : siteList) {
-            DetailedStatisticsItem item = getDetailed(site);
-            result.add(item);
+            DetailedStatistics detailedSiteStatistics = getDetailedStatistics(site);
+            result.add(detailedSiteStatistics);
         }
         return result;
-    }
-
-    @Override
-    public StatisticsResponse getStatistics() {
-        TotalStatistics total = getTotal();
-        List<DetailedStatisticsItem> list = getDetailedList();
-        return new StatisticsResponse(true, new StatisticsData(total, list));
     }
 }

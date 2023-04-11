@@ -31,7 +31,7 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<Object> startIndexing() {
-        return indexingService.indexing();
+        return indexingService.startIndexing();
     }
 
     @GetMapping("/stopIndexing")
@@ -41,7 +41,7 @@ public class ApiController {
 
     @PostMapping("/indexPage")
     public ResponseEntity<Object> indexPage(@RequestParam(name = "url") String url) {
-        return indexingService.indexingPage(url);
+        return indexingService.onePageIndexing(url);
     }
 
     @GetMapping("/search")

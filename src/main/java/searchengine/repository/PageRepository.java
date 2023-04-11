@@ -13,7 +13,7 @@ import java.util.List;
 @Repository
 public interface PageRepository extends JpaRepository<Page, Integer> {
     int countBySite(Site site);
-    Iterable<Page> findBySite(Site site);
+    Iterable<Page> findPageListBySite(Site site);
     @Query(value = "SELECT p.* FROM Page p JOIN `index` i ON p.id = i.page_id WHERE i.lemma_id = :lemma", nativeQuery = true)
-    List<Page> findByLemma(@Param("lemma") Lemma lemma);
+    List<Page> findPageListByLemma(@Param("lemma") Lemma lemma);
 }

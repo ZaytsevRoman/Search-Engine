@@ -6,7 +6,7 @@ import searchengine.model.Status;
 import java.util.Date;
 
 @Value
-public class DetailedStatisticsItem {
+public class DetailedStatistics {
     private String url;
     private String name;
     private Status status;

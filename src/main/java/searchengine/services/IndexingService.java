@@ -3,7 +3,7 @@ package searchengine.services;
 import org.springframework.http.ResponseEntity;
 
 public interface IndexingService {
-    ResponseEntity<Object> indexing();
+    ResponseEntity<Object> startIndexing();
     ResponseEntity<Object> stopIndexing();
-    ResponseEntity<Object> indexingPage(String url);
+    ResponseEntity<Object> onePageIndexing(String url);
 }

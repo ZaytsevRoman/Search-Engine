@@ -6,6 +6,6 @@ import searchengine.model.Site;
 import java.util.List;
 
 public interface LemmaParser {
-    void run(Site site);
+    void statisticsLemmaListParsing(Site site);
     List<StatisticsLemma> getStatisticsLemmaList();
 }

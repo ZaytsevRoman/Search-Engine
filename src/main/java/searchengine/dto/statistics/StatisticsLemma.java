@@ -4,6 +4,6 @@ import lombok.Value;
 
 @Value
 public class StatisticsLemma {
-    String lemma;
-    int frequency;
+    private String lemma;
+    private int frequency;
 }

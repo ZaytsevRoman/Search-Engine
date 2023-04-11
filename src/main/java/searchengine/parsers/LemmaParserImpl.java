@@ -7,7 +7,7 @@ import searchengine.model.Page;
 import searchengine.model.Site;
 import searchengine.services.MorphologyService;
 import searchengine.repository.PageRepository;
-import searchengine.utils.CleanHtmlCode;
+import searchengine.utils.HtmlCodeCleaner;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -24,17 +24,17 @@ public class LemmaParserImpl implements LemmaParser {
     }
 
     @Override
-    public void run(Site site) {
+    public void statisticsLemmaListParsing(Site site) {
         statisticsLemmaList = new CopyOnWriteArrayList<>();
-        Iterable<Page> pageList = pageRepository.findAll();
+        Iterable<Page> pageList = pageRepository.findPageListBySite(site);
         TreeMap<String, Integer> lemmaList = new TreeMap<>();
         for (Page page : pageList) {
             String content = page.getContent();
-            HashMap<String, Integer> titleList = getTitleList(content);
-            HashMap<String, Integer> bodyList = getBodyList(content);
+            HashMap<String, Integer> lemmaListFromTitle = getLemmaListFromTitle(content);
+            HashMap<String, Integer> lemmaListFromBody = getLemmaListFromBody(content);
             Set<String> allTheWords = new HashSet<>();
-            allTheWords.addAll(titleList.keySet());
-            allTheWords.addAll(bodyList.keySet());
+            allTheWords.addAll(lemmaListFromTitle.keySet());
+            allTheWords.addAll(lemmaListFromBody.keySet());
             for (String word : allTheWords) {
                 int frequency = lemmaList.getOrDefault(word, 0) + 1;
                 lemmaList.put(word, frequency);
@@ -50,15 +50,15 @@ public class LemmaParserImpl implements LemmaParser {
         }
     }
 
-    private HashMap<String, Integer> getTitleList(String content) {
-        String title = CleanHtmlCode.clear(content, "title");
-        HashMap<String, Integer> titleList = morphology.getLemmaList(title);
-        return titleList;
+    private HashMap<String, Integer> getLemmaListFromTitle(String content) {
+        String title = HtmlCodeCleaner.getClearHtmlCode(content, "title");
+        HashMap<String, Integer> lemmaListFromTitle = morphology.getLemmaListWithCount(title);
+        return lemmaListFromTitle;
     }
 
-    private HashMap<String, Integer> getBodyList(String content) {
-        String body = CleanHtmlCode.clear(content, "body");
-        HashMap<String, Integer> bodyList = morphology.getLemmaList(body);
-        return bodyList;
+    private HashMap<String, Integer> getLemmaListFromBody(String content) {
+        String body = HtmlCodeCleaner.getClearHtmlCode(content, "body");
+        HashMap<String, Integer> lemmaListFromBody = morphology.getLemmaListWithCount(body);
+        return lemmaListFromBody;
     }
 }

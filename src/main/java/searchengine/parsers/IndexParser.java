@@ -6,6 +6,6 @@ import searchengine.model.Site;
 import java.util.List;
 
 public interface IndexParser {
-    void run(Site site);
+    void statisticsIndexListParsing(Site site);
     List<StatisticsIndex> getStatisticsIndexList();
 }

@@ -1,10 +1,12 @@
 package searchengine.parsers;
 
+import lombok.AllArgsConstructor;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import searchengine.config.ConnectionConfiguration;
 import searchengine.dto.statistics.StatisticsPage;
 
 import java.io.IOException;
@@ -13,22 +15,18 @@ import java.util.List;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 
+@AllArgsConstructor
 public class UrlParser extends RecursiveTask<List<StatisticsPage>> {
     private final String url;
     private final List<String> urlList;
     private final List<StatisticsPage> statisticsPageList;
-
-    public UrlParser(String url, List<StatisticsPage> statisticsPageList, List<String> urlList) {
-        this.url = url;
-        this.statisticsPageList = statisticsPageList;
-        this.urlList = urlList;
-    }
+    private final ConnectionConfiguration connectionConfiguration;
 
     @Override
     protected List<StatisticsPage> compute() {
         try {
-            Thread.sleep(150);
-            Document document = getConnection();
+            Thread.sleep(500);
+            Document document = getConnectionConfiguration();
             String html = document.outerHtml();
             Connection.Response response = document.connection().response();
             int statusCode = response.statusCode();
@@ -38,9 +36,9 @@ public class UrlParser extends RecursiveTask<List<StatisticsPage>> {
             List<UrlParser> taskList = new ArrayList<>();
             for (Element link : links) {
                 String absUrl = link.attr("abs:href");
-                if (isCorrected(absUrl, link)) {
+                if (isUrlCorrect(absUrl, link)) {
                     urlList.add(absUrl);
-                    UrlParser task = new UrlParser(absUrl, statisticsPageList, urlList);
+                    UrlParser task = new UrlParser(absUrl, urlList, statisticsPageList, connectionConfiguration);
                     task.fork();
                     taskList.add(task);
                 }
@@ -53,7 +51,7 @@ public class UrlParser extends RecursiveTask<List<StatisticsPage>> {
         return statisticsPageList;
     }
 
-    private boolean isCorrected(String absUrl, Element link) {
+    private boolean isUrlCorrect(String absUrl, Element link) {
         return (absUrl.startsWith(link.baseUri())
                 && !absUrl.equals(link.baseUri())
                 && !absUrl.contains("#")
@@ -61,10 +59,10 @@ public class UrlParser extends RecursiveTask<List<StatisticsPage>> {
                 && !urlList.contains(absUrl));
     }
 
-    private Document getConnection() throws IOException {
+    private Document getConnectionConfiguration() throws IOException {
         return Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
-                .referrer("http://www.google.com")
+                .userAgent(connectionConfiguration.getUserAgent())
+                .referrer(connectionConfiguration.getReferrer())
                 .timeout(500 + (int) (Math.random() * 4500))
                 .get();
     }

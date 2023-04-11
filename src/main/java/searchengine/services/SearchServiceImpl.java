@@ -16,7 +16,7 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
-import searchengine.utils.CleanHtmlCode;
+import searchengine.utils.HtmlCodeCleaner;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,7 +45,7 @@ public class SearchServiceImpl implements SearchService {
     private ResponseEntity<Object> getSearchData(String text, String url, int offset, int limit) {
         List<StatisticsSearch> searchData;
         if (!url.isEmpty()) {
-            if (siteRepository.findByUrl(url) == null) {
+            if (siteRepository.findSiteByUrl(url) == null) {
                 return new ResponseEntity<>(new BadRequest(false, "Указанная страница не найдена"),
                         HttpStatus.BAD_REQUEST);
             } else {
@@ -60,108 +60,112 @@ public class SearchServiceImpl implements SearchService {
     private List<StatisticsSearch> allSiteSearch(String text, int offset, int limit) {
         log.info("Поиск по всем сайтам: " + text);
         List<Site> siteList = siteRepository.findAll();
-        List<String> wordsList = getWordsFromSearchText(text);
+        List<String> lemmasFromSearchText = getLemmasFromSearchText(text);
         List<Lemma> foundLemmaListAllSite = new ArrayList<>();
-        List<Page> result = new ArrayList<>();
+        List<Page> pageListWithLemmas = new ArrayList<>();
+        List<StatisticsSearch> result = new ArrayList<>();
         for (int i = 0; i < siteList.size(); i++) {
-            List<Lemma> foundLemmaList = getLemmaListFromSite(wordsList, siteList.get(i));
-            foundLemmaListAllSite.addAll(getLemmaListFromSite(wordsList, siteList.get(i)));
-            result.addAll(getPageListWithLemmas(foundLemmaList, offset, limit));
+            List<Lemma> foundLemmaList = getLemmaListFromSite(lemmasFromSearchText, siteList.get(i));
+            foundLemmaListAllSite.addAll(foundLemmaList);
+            pageListWithLemmas.addAll(getPageListWithLemmas(foundLemmaList, offset, limit));
         }
-        List<StatisticsSearch> dataList = getListStatisticSearch(foundLemmaListAllSite, result, wordsList);
+        List<StatisticsSearch> dataList = getStatisticSearchList(foundLemmaListAllSite, pageListWithLemmas, lemmasFromSearchText);
+        if (dataList.size() > limit) {
+            for (int i = 0; i < limit; i++) {
+                result.add(dataList.get(i));
+            }
+            return result;
+        }
         log.info("Поиск завершен");
         return dataList;
     }
 
     private List<StatisticsSearch> siteSearch(String text, String url, int offset, int limit) {
         log.info("Поиск: " + text + ", на сайте: " + url);
-        Site site = siteRepository.findByUrl(url);
-        List<String> wordsList = getWordsFromSearchText(text);
-        List<Lemma> foundLemmaList = getLemmaListFromSite(wordsList, site);
-        List<Page> result = new ArrayList<>(getPageListWithLemmas(foundLemmaList, offset, limit));
-        List<StatisticsSearch> dataList = getListStatisticSearch(foundLemmaList, result, wordsList);
+        Site site = siteRepository.findSiteByUrl(url);
+        List<String> lemmasFromSearchText = getLemmasFromSearchText(text);
+        List<Lemma> foundLemmaList = getLemmaListFromSite(lemmasFromSearchText, site);
+        List<Page> result = getPageListWithLemmas(foundLemmaList, offset, limit);
+        List<StatisticsSearch> dataList = getStatisticSearchList(foundLemmaList, result, lemmasFromSearchText);
         log.info("Поиск завершен");
         return dataList;
     }
 
-    private List<StatisticsSearch> getListStatisticSearch(List<Lemma> lemmaList, List<Page> pageList, List<String> wordsList) {
+    private List<StatisticsSearch> getStatisticSearchList(List<Lemma> foundLemmaList, List<Page> pageList, List<String> lemmasFromSearchText) {
         indexRepository.flush();
-        List<Index> foundIndexList = indexRepository.findByPagesAndLemmas(lemmaList, pageList);
-        Hashtable<Page, Float> sortedPageByAbsRelevance = getPageAbsRelevance(pageList, foundIndexList);
-        List<StatisticsSearch> dataList = getSearchData(sortedPageByAbsRelevance, wordsList);
+        List<Index> indexList = indexRepository.findIndexListByPagesAndLemmas(foundLemmaList, pageList);
+        Hashtable<Page, Float> pageListWithAbsRelevance = getPageListWithAbsRelevance(pageList, indexList);
+        List<StatisticsSearch> dataList = getSearchData(pageListWithAbsRelevance, lemmasFromSearchText);
         dataList.sort((o1, o2) -> Float.compare(o2.getRelevance(), o1.getRelevance()));
         return dataList;
     }
 
-    private List<String> getWordsFromSearchText(String text) {
+    private List<String> getLemmasFromSearchText(String text) {
         String[] words = text.toLowerCase(Locale.ROOT).split(" ");
-        List<String> wordsList = new ArrayList<>();
+        List<String> lemmaList = new ArrayList<>();
         for (String word : words) {
-            wordsList.addAll(morphology.getLemma(word));
+            lemmaList.addAll(morphology.getLemmaList(word));
         }
-        return wordsList;
+        return lemmaList;
     }
 
-    private List<Lemma> getLemmaListFromSite(List<String> words, Site site) {
+    private List<Lemma> getLemmaListFromSite(List<String> lemmasFromSearchText, Site site) {
         lemmaRepository.flush();
         List<Lemma> lemmaList = new ArrayList<>();
-        List<Lemma> result = lemmaRepository.findLemmaListBySite(words, site);
-        if (result.size() >= words.size()) {
+        List<Lemma> result = lemmaRepository.findLemmaListBySiteAndLemmas(lemmasFromSearchText, site);
+        if (result.size() >= lemmasFromSearchText.size()) {
             lemmaList = result;
             lemmaList.sort(Comparator.comparingInt(Lemma::getFrequency));
         }
         return lemmaList;
     }
 
-    private List<Page> getPageListWithLemmas(List<Lemma> lemmaList, int offset, int limit) {
+    private List<Page> getPageListWithLemmas(List<Lemma> foundLemmaList, int offset, int limit) {
         List<Page> result = new ArrayList<>();
-        List<Page> resultFoundPageList = new ArrayList<>();
-        if (lemmaList.size() == 1) {
-            resultFoundPageList = getPageListWithOneLemma(lemmaList);
+        List<Page> foundPageList = new ArrayList<>();
+        if (foundLemmaList.size() == 1) {
+            foundPageList = getPageListWithOneLemma(foundLemmaList);
         }
-        if (lemmaList.size() > 1) {
-            resultFoundPageList = getPageListWithSomeLemmas(lemmaList);
+        if (foundLemmaList.size() > 1) {
+            foundPageList = getPageListWithSomeLemmas(foundLemmaList);
         }
-        if (offset > resultFoundPageList.size()) {
+        if (offset > foundPageList.size()) {
             return new ArrayList<>();
         }
-        if (resultFoundPageList.size() > limit) {
-            for (int i = offset; i < limit; i++) {
-                result.add(resultFoundPageList.get(i));
+        if (foundPageList.size() > limit) {
+            for (int i = 0; i < limit; i++) {
+                result.add(foundPageList.get(i));
             }
             return result;
-        } else return resultFoundPageList;
+        } else return foundPageList;
     }
 
-    private List<Page> getPageListWithOneLemma(List<Lemma> lemmaList) {
+    private List<Page> getPageListWithOneLemma(List<Lemma> foundLemmaList) {
         pageRepository.flush();
-        List<Page> resultFoundPageList = pageRepository.findByLemma(lemmaList.get(0));
-        return resultFoundPageList;
+        List<Page> foundPageList = pageRepository.findPageListByLemma(foundLemmaList.get(0));
+        return foundPageList;
     }
 
-    private List<Page> getPageListWithSomeLemmas(List<Lemma> lemmaList) {
-        List<Page> resultFoundPageList = new ArrayList<>();
-        for (int i = 1; i < lemmaList.size(); i++) {
-            resultFoundPageList.addAll(getPageListByLemma(lemmaList, i));
-        }
-        return resultFoundPageList;
-    }
-
-    private List<Page> getPageListByLemma(List<Lemma> lemmaList, int i) {
-        List<Page> resultFoundPageList = new ArrayList<>();
+    private List<Page> getPageListWithSomeLemmas(List<Lemma> foundLemmaList) {
+        List<Page> foundPageList = new ArrayList<>();
         pageRepository.flush();
-        List<Page> pageList = pageRepository.findByLemma(lemmaList.get(i - 1));
-        for (Page page : pageList) {
-            if (!indexRepository.findByPageAndLemma(lemmaList.get(i), page).isEmpty() && i < (lemmaList.size() - 1)) {
-                continue;
-            } else if (i == (lemmaList.size() - 1) && !indexRepository.findByPageAndLemma(lemmaList.get(i), page).isEmpty()) {
-                resultFoundPageList.add(page);
-            }
+        List<Page> pageList = pageRepository.findPageListByLemma(foundLemmaList.get(0));
+        for (int i = 1; i < foundLemmaList.size(); i++) {
+            foundPageList.addAll(getPageListByLemmas(foundLemmaList, i, pageList));
         }
-        return resultFoundPageList;
+        return foundPageList;
     }
 
-    private List<StatisticsSearch> getSearchData(Hashtable<Page, Float> pageList, List<String> wordsList) {
+    private List<Page> getPageListByLemmas(List<Lemma> foundLemmaList, int i, List<Page> pageList) {
+        List<Page> foundPageList = new ArrayList<>();
+        pageList.removeIf(page -> indexRepository.findIndexListByPageAndLemma(foundLemmaList.get(i), page).isEmpty());
+        if (i == (foundLemmaList.size() - 1)) {
+            foundPageList = pageList;
+        }
+        return foundPageList;
+    }
+
+    private List<StatisticsSearch> getSearchData(Hashtable<Page, Float> pageList, List<String> lemmasFromSearchText) {
         List<StatisticsSearch> result = new ArrayList<>();
         for (Page page : pageList.keySet()) {
             Site pageSite = page.getSite();
@@ -172,41 +176,41 @@ public class SearchServiceImpl implements SearchService {
             Float absRelevance = pageList.get(page);
 
             StringBuilder clearContent = new StringBuilder();
-            String title = CleanHtmlCode.clear(content, "title");
-            String body = CleanHtmlCode.clear(content, "body");
+            String title = HtmlCodeCleaner.getClearHtmlCode(content, "title");
+            String body = HtmlCodeCleaner.getClearHtmlCode(content, "body");
             clearContent.append(title).append(" ").append(body);
-            String snippet = getSnippet(clearContent.toString(), wordsList);
+            String snippet = getSnippet(clearContent.toString(), lemmasFromSearchText);
 
             result.add(new StatisticsSearch(address, siteName, uri, title, snippet, absRelevance));
         }
         return result;
     }
 
-    private String getSnippet(String content, List<String> wordsList) {
-        List<Integer> lemmaIndex = new ArrayList<>();
+    private String getSnippet(String content, List<String> lemmasFromSearchText) {
+        List<Integer> lemmaIndexList = new ArrayList<>();
         StringBuilder result = new StringBuilder();
-        for (String words : wordsList) {
-            lemmaIndex.addAll(morphology.findLemmaIndexInText(content, words));
+        for (String lemma : lemmasFromSearchText) {
+            lemmaIndexList.addAll(morphology.getLemmaIndexList(content, lemma));
         }
-        Collections.sort(lemmaIndex);
-        List<String> resultList = getWordsFromContent(content, lemmaIndex);
+        Collections.sort(lemmaIndexList);
+        List<String> resultList = getWordsFromContent(content, lemmaIndexList);
         for (int i = 0; i < resultList.size(); i++) {
             result.append(resultList.get(i)).append("... ");
-            if (i > 3) {
+            if (i > 5) {
                 break;
             }
         }
         return result.toString();
     }
 
-    private List<String> getWordsFromContent(String content, List<Integer> lemmaIndex) {
+    private List<String> getWordsFromContent(String content, List<Integer> lemmaIndexList) {
         List<String> result = new ArrayList<>();
-        for (int i = 0; i < lemmaIndex.size(); i++) {
-            int start = lemmaIndex.get(i);
+        for (int i = 0; i < lemmaIndexList.size(); i++) {
+            int start = lemmaIndexList.get(i);
             int end = content.indexOf(" ", start);
             int nextPoint = i + 1;
-            while (nextPoint < lemmaIndex.size() && lemmaIndex.get(nextPoint) - end > 0 && lemmaIndex.get(nextPoint) - end < 5) {
-                end = content.indexOf(" ", lemmaIndex.get(nextPoint));
+            while (nextPoint < lemmaIndexList.size() && lemmaIndexList.get(nextPoint) - end > 0 && lemmaIndexList.get(nextPoint) - end < 5) {
+                end = content.indexOf(" ", lemmaIndexList.get(nextPoint));
                 nextPoint += 1;
             }
             i = nextPoint - 1;
@@ -236,29 +240,29 @@ public class SearchServiceImpl implements SearchService {
         return text;
     }
 
-    private Hashtable<Page, Float> getPageAbsRelevance(List<Page> pageList, List<Index> indexList) {
+    private Hashtable<Page, Float> getPageListWithAbsRelevance(List<Page> pageList, List<Index> indexList) {
         HashMap<Page, Float> pageWithRelevance = new HashMap<>();
         for (Page page : pageList) {
-            float relevant = getRelevant(indexList, page);
-            pageWithRelevance.put(page, relevant);
+            float relevance = getRelevance(indexList, page);
+            pageWithRelevance.put(page, relevance);
         }
         HashMap<Page, Float> pageWithAbsRelevance = new HashMap<>();
         for (Page page : pageWithRelevance.keySet()) {
-            float absRelevant = pageWithRelevance.get(page) / Collections.max(pageWithRelevance.values());
-            pageWithAbsRelevance.put(page, absRelevant);
+            float absRelevance = pageWithRelevance.get(page) / Collections.max(pageWithRelevance.values());
+            pageWithAbsRelevance.put(page, absRelevance);
         }
         return pageWithAbsRelevance.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, Hashtable::new));
     }
 
-    private float getRelevant(List<Index> indexList, Page page) {
-        float relevant = 0;
+    private float getRelevance(List<Index> indexList, Page page) {
+        float relevance = 0;
         for (Index index : indexList) {
             if (index.getPage() == page) {
-                relevant += index.getRank();
+                relevance += index.getRank();
             }
         }
-        return relevant;
+        return relevance;
     }
 }
