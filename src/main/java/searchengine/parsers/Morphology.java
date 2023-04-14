@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.parsers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
@@ -6,7 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.lucene.morphology.LuceneMorphology;
-import org.springframework.stereotype.Service;
+import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,19 +14,21 @@ import java.util.List;
 import java.util.Locale;
 
 @Slf4j
-@Service
-public class MorphologyServiceImpl implements MorphologyService {
-    private final LuceneMorphology luceneMorphology;
+public class Morphology {
+    private static LuceneMorphology luceneMorphology;
     private final static String REGEX = "\\p{Punct}|[0-9]|№|©|◄|«|»|—|-|@|…";
     private final static Marker INVALID_SYMBOL_MARKER = MarkerManager.getMarker("INVALID_SYMBOL");
     private final static Logger LOGGER = LogManager.getLogger(LuceneMorphology.class);
 
-
-    public MorphologyServiceImpl(LuceneMorphology luceneMorphology) {
-        this.luceneMorphology = luceneMorphology;
+    static {
+        try {
+            luceneMorphology = new RussianLuceneMorphology();
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage());
+        }
     }
-    @Override
-    public HashMap<String, Integer> getLemmaListWithCount(String content) {
+
+    public static HashMap<String, Integer> getLemmaListWithCount(String content) {
         content = content.toLowerCase(Locale.ROOT)
                 .replaceAll(REGEX, " ");
         HashMap<String, Integer> lemmaListWithCount = new HashMap<>();
@@ -41,8 +43,7 @@ public class MorphologyServiceImpl implements MorphologyService {
         return lemmaListWithCount;
     }
 
-    @Override
-    public List<String> getLemmaList(String word) {
+    public static List<String> getLemmaList(String word) {
         List<String> lemmaList = new ArrayList<>();
         try {
             List<String> baseRusForm = luceneMorphology.getNormalForms(word);
@@ -55,8 +56,7 @@ public class MorphologyServiceImpl implements MorphologyService {
         return lemmaList;
     }
 
-    @Override
-    public List<Integer> getLemmaIndexList(String content, String lemmaFromSearchText) {
+    public static List<Integer> getLemmaIndexList(String content, String lemmaFromSearchText) {
         List<Integer> lemmaIndexList = new ArrayList<>();
         String[] words = content.toLowerCase(Locale.ROOT).split("\\p{Punct}|\\s");
         int index = 0;
@@ -72,7 +72,7 @@ public class MorphologyServiceImpl implements MorphologyService {
         return lemmaIndexList;
     }
 
-    private boolean isServiceWord(String word) {
+    private static boolean isServiceWord(String word) {
         List<String> morphInfoList = luceneMorphology.getMorphInfo(word);
         for (String morphInfo : morphInfoList) {
             if (morphInfo.contains("ПРЕДЛ")

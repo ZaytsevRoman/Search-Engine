@@ -12,6 +12,7 @@ import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Site;
+import searchengine.parsers.Morphology;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
@@ -25,7 +26,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class SearchServiceImpl implements SearchService {
-    private final MorphologyService morphology;
     private final LemmaRepository lemmaRepository;
     private final PageRepository pageRepository;
     private final IndexRepository indexRepository;
@@ -104,7 +104,7 @@ public class SearchServiceImpl implements SearchService {
         String[] words = text.toLowerCase(Locale.ROOT).split(" ");
         List<String> lemmaList = new ArrayList<>();
         for (String word : words) {
-            lemmaList.addAll(morphology.getLemmaList(word));
+            lemmaList.addAll(Morphology.getLemmaList(word));
         }
         return lemmaList;
     }
@@ -190,7 +190,7 @@ public class SearchServiceImpl implements SearchService {
         List<Integer> lemmaIndexList = new ArrayList<>();
         StringBuilder result = new StringBuilder();
         for (String lemma : lemmasFromSearchText) {
-            lemmaIndexList.addAll(morphology.getLemmaIndexList(content, lemma));
+            lemmaIndexList.addAll(Morphology.getLemmaIndexList(content, lemma));
         }
         Collections.sort(lemmaIndexList);
         List<String> resultList = getWordsFromContent(content, lemmaIndexList);

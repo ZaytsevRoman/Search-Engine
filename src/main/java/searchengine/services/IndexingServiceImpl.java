@@ -10,8 +10,6 @@ import searchengine.dto.statistics.BadRequest;
 import searchengine.dto.statistics.Response;
 import searchengine.model.Site;
 import searchengine.model.Status;
-import searchengine.parsers.IndexParser;
-import searchengine.parsers.LemmaParser;
 import searchengine.parsers.SiteIndexing;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
@@ -31,11 +29,8 @@ public class IndexingServiceImpl implements IndexingService {
     private final SiteRepository siteRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
-    private final LemmaParser lemmaParser;
-    private final IndexParser indexParser;
     private final SitesList sitesList;
     private final ConnectionConfiguration connectionConfiguration;
-
 
     @Override
     public ResponseEntity<Object> startIndexing() {
@@ -47,7 +42,7 @@ public class IndexingServiceImpl implements IndexingService {
             executorService = Executors.newFixedThreadPool(processorCoreCount);
             for (searchengine.config.Site site : siteList) {
                 String url = site.getUrl();
-                executorService.submit(new SiteIndexing(pageRepository, siteRepository, lemmaRepository, indexRepository, lemmaParser, indexParser, url, sitesList, connectionConfiguration));
+                executorService.submit(new SiteIndexing(pageRepository, siteRepository, lemmaRepository, indexRepository, url, sitesList, connectionConfiguration));
             }
             executorService.shutdown();
         }
@@ -82,7 +77,7 @@ public class IndexingServiceImpl implements IndexingService {
             return new ResponseEntity<>(new BadRequest(false, "Страница не указана"), HttpStatus.BAD_REQUEST);
         } else if (isUrlInConfig(url)) {
             executorService = Executors.newFixedThreadPool(processorCoreCount);
-            executorService.submit(new SiteIndexing(pageRepository, siteRepository, lemmaRepository, indexRepository, lemmaParser, indexParser, url, sitesList, connectionConfiguration));
+            executorService.submit(new SiteIndexing(pageRepository, siteRepository, lemmaRepository, indexRepository, url, sitesList, connectionConfiguration));
             executorService.shutdown();
             return new ResponseEntity<>(new Response(true), HttpStatus.OK);
         } else {

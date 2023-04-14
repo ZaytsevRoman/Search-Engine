@@ -29,8 +29,6 @@ public class SiteIndexing implements Runnable {
     private final LemmaRepository lemmaRepository;
     private static final int coreAmount = Runtime.getRuntime().availableProcessors();
     private final IndexRepository indexRepository;
-    private final LemmaParser lemmaParser;
-    private final IndexParser indexParser;
     private final String url;
     private final SitesList sitesList;
     private final ConnectionConfiguration connectionConfiguration;
@@ -106,8 +104,8 @@ public class SiteIndexing implements Runnable {
         if (!Thread.interrupted()) {
             Site site = siteRepository.findSiteByUrl(url);
             site.setStatusTime(new Date());
-            lemmaParser.statisticsLemmaListParsing(site);
-            List<StatisticsLemma> statisticsLemmaList = lemmaParser.getStatisticsLemmaList();
+            LemmaParser.statisticsLemmaListParsing(site, pageRepository);
+            List<StatisticsLemma> statisticsLemmaList = LemmaParser.getStatisticsLemmaList();
             List<Lemma> lemmaList = new CopyOnWriteArrayList<>();
             for (StatisticsLemma statisticsLemma : statisticsLemmaList) {
                 lemmaList.add(new Lemma(statisticsLemma.getLemma(), statisticsLemma.getFrequency(), site));
@@ -122,8 +120,8 @@ public class SiteIndexing implements Runnable {
     private void saveIndexList() throws InterruptedException {
         if (!Thread.interrupted()) {
             Site site = siteRepository.findSiteByUrl(url);
-            indexParser.statisticsIndexListParsing(site);
-            List<StatisticsIndex> statisticsIndexList = new CopyOnWriteArrayList<>(indexParser.getStatisticsIndexList());
+            IndexParser.statisticsIndexListParsing(site, pageRepository, lemmaRepository);
+            List<StatisticsIndex> statisticsIndexList = new CopyOnWriteArrayList<>(IndexParser.getStatisticsIndexList());
             List<Index> indexList = new CopyOnWriteArrayList<>();
             site.setStatusTime(new Date());
             for (StatisticsIndex statisticsIndex : statisticsIndexList) {
